@@ -2306,8 +2306,7 @@ X86TargetLowering::LowerFormalArguments(SDValue Chain,
         X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9
       };
       static const uint16_t XMMArgRegs64Bit[] = {
-        X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
-        X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
+        X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3
       };
       const uint16_t *GPR64ArgRegs;
       unsigned NumXMMRegs = 0;
@@ -2319,7 +2318,7 @@ X86TargetLowering::LowerFormalArguments(SDValue Chain,
         TotalNumIntRegs = 4;
         GPR64ArgRegs = GPR64ArgRegsWin64;
       } else {
-        TotalNumIntRegs = 6; TotalNumXMMRegs = 8;
+        TotalNumIntRegs = 6; TotalNumXMMRegs = 4;
         GPR64ArgRegs = GPR64ArgRegs64Bit;
 
         NumXMMRegs = CCInfo.getFirstUnallocated(XMMArgRegs64Bit,
@@ -2695,9 +2694,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Count the number of XMM registers allocated.
     static const uint16_t XMMArgRegs[] = {
       X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
-      X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
+      X86::XMM4
     };
-    unsigned NumXMMRegs = CCInfo.getFirstUnallocated(XMMArgRegs, 8);
+    unsigned NumXMMRegs = CCInfo.getFirstUnallocated(XMMArgRegs, 5);
     assert((Subtarget->hasSSE1() || !NumXMMRegs)
            && "SSE registers cannot be used when SSE is disabled");
 
@@ -14970,7 +14969,7 @@ X86TargetLowering::EmitVAARG64WithCustomInserter(
   // alignment(va_list) = 8
 
   unsigned TotalNumIntRegs = 6;
-  unsigned TotalNumXMMRegs = 8;
+  unsigned TotalNumXMMRegs = 4;
   bool UseGPOffset = (ArgMode == 1);
   bool UseFPOffset = (ArgMode == 2);
   unsigned MaxOffset = TotalNumIntRegs * 8 +
@@ -15794,11 +15793,350 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr *MI,
   return MBB;
 }
 
+// BEGIN AESSECURE
+
+MachineBasicBlock *
+X86TargetLowering::EmitLoweredMACPtr(MachineInstr *MI,
+                                     MachineBasicBlock *MBB) const {
+    const TargetInstrInfo *TII = getTargetMachine().getInstrInfo();
+    DebugLoc DL = MI->getDebugLoc();
+    MachineBasicBlock::iterator MBBI = MI;
+    MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+    printf("CCFI::EmitLoweredMACPtr!\n");
+
+    assert(MI->getNumOperands() == 4 && "MACPTR should have 4 operands!");
+
+    MachineOperand &macval = MI->getOperand(0);
+    MachineOperand &ptr = MI->getOperand(1);
+    MachineOperand &addr = MI->getOperand(2);
+    const TargetRegisterClass *XMMClass = getRegClassFor(MVT::v2i64);
+
+    // Pack pointer and address
+    unsigned XMMTempPtr = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMTempAddr = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMPlaintex = MRI.createVirtualRegister(XMMClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::COPY), XMMTempPtr)
+        .addOperand(ptr);
+    BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::COPY), XMMTempAddr)
+        .addOperand(addr);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::PUNPCKLQDQrr), XMMPlaintex)
+        .addReg(XMMTempPtr)
+        .addReg(XMMTempAddr);
+
+    // Encrypt Pointer
+    unsigned XMMRound0 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound1 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound2 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound3 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound4 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound5 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound6 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound7 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound8 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound9 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound10 = MRI.createVirtualRegister(XMMClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::PXORrr), XMMRound0)
+        .addReg(XMMPlaintex)
+        .addReg(X86::XMM5);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound1)
+        .addReg(XMMRound0)
+        .addReg(X86::XMM6);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound2)
+        .addReg(XMMRound1)
+        .addReg(X86::XMM7);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound3)
+        .addReg(XMMRound2)
+        .addReg(X86::XMM8);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound4)
+        .addReg(XMMRound3)
+        .addReg(X86::XMM9);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound5)
+        .addReg(XMMRound4)
+        .addReg(X86::XMM10);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound6)
+        .addReg(XMMRound5)
+        .addReg(X86::XMM11);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound7)
+        .addReg(XMMRound6)
+        .addReg(X86::XMM12);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound8)
+        .addReg(XMMRound7)
+        .addReg(X86::XMM13);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound9)
+        .addReg(XMMRound8)
+        .addReg(X86::XMM14);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCLASTrr), XMMRound10)
+        .addReg(XMMRound9)
+        .addReg(X86::XMM15);
+
+    // Compute Hash Table Address
+    // MACSlotReg = addr ^ (addr >> 32);
+    unsigned AddrShiftReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned AddrXorReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    //BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), MACSlotReg)
+//	.addOperand(addr);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHR64ri), AddrShiftReg)
+	.addOperand(addr)
+	.addImm(0x20);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::XOR64rr), AddrXorReg)
+	.addReg(AddrShiftReg)
+	.addOperand(addr);
+    // MACSlotReg = MACSlotReg * (MACSlotReg + 3);
+    unsigned AddrPlusThreeReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned SlotHashReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::ADD64ri8), AddrPlusThreeReg)
+	.addReg(AddrXorReg)
+	.addImm(3);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), X86::RAX)
+	.addReg(AddrPlusThreeReg);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MUL64r))
+	.addReg(AddrXorReg);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), SlotHashReg)
+	.addReg(X86::RAX);
+    /*unsigned ZeroReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned CRCReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64ri), ZeroReg)
+	.addImm(0);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::CRC32r64r64), CRCReg)
+        .addReg(ZeroReg)
+        .addOperand(addr);*/
+    // Mask bits and compute slot
+    unsigned SlotMaskedReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned SlotReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned BaseReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned BaseTmpReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned MACAddrReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AND64ri32), SlotMaskedReg)
+        .addReg(SlotHashReg)
+        .addImm(0x0FFFFFFF);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHL64ri), SlotReg)
+	.addReg(SlotMaskedReg)
+	.addImm(5);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64ri32), BaseTmpReg)
+        .addImm(0x60);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHL64ri), BaseReg)
+        .addReg(BaseTmpReg)
+        .addImm(0x20);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::OR64rr), MACAddrReg)
+        .addReg(SlotReg)
+        .addReg(BaseReg);
+
+    // Store Encrypted Pointer
+    addRegOffset(BuildMI(*MBB, MBBI, DL, TII->get(X86::MOVAPSmr)),
+		MACAddrReg, false, 0).addReg(XMMRound10);
+    addRegOffset(BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64mr)),
+		MACAddrReg, false, 16).addOperand(ptr);
+    addRegOffset(BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64mr)),
+		MACAddrReg, false, 24).addOperand(addr);
+
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOVAPSrr))
+	.addOperand(macval)
+	.addReg(XMMRound10);
+
+    MI->eraseFromParent();
+
+    return MBB;
+}
+
+MachineBasicBlock *
+X86TargetLowering::EmitLoweredCheckPtr(MachineInstr *MI,
+                                       MachineBasicBlock *MBB) const {
+    const TargetInstrInfo *TII = getTargetMachine().getInstrInfo();
+    DebugLoc DL = MI->getDebugLoc();
+    MachineBasicBlock::iterator MBBI = MI;
+    MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+    printf("CCFI::EmitLoweredCheckPtr!\n");
+
+    assert(MI->getNumOperands() == 4 && "CHECKPTR should have 4 operands!");
+
+    MachineOperand &retval = MI->getOperand(0);
+    MachineOperand &ptr = MI->getOperand(1);
+    MachineOperand &addr = MI->getOperand(2);
+    const TargetRegisterClass *XMMClass = getRegClassFor(MVT::v2i64);
+
+    // Pack pointer and address
+    unsigned XMMTempPtr = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMTempAddr = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMPlaintex = MRI.createVirtualRegister(XMMClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::COPY), XMMTempPtr)
+        .addOperand(ptr);
+    BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::COPY), XMMTempAddr)
+        .addOperand(addr);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::PUNPCKLQDQrr), XMMPlaintex)
+        .addReg(XMMTempPtr)
+        .addReg(XMMTempAddr);
+
+    // Encrypt Pointer
+    unsigned XMMRound0 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound1 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound2 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound3 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound4 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound5 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound6 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound7 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound8 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound9 = MRI.createVirtualRegister(XMMClass);
+    unsigned XMMRound10 = MRI.createVirtualRegister(XMMClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::PXORrr), XMMRound0)
+        .addReg(XMMPlaintex)
+        .addReg(X86::XMM5);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound1)
+        .addReg(XMMPlaintex)
+        .addReg(X86::XMM6);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound2)
+        .addReg(XMMRound1)
+        .addReg(X86::XMM7);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound3)
+        .addReg(XMMRound2)
+        .addReg(X86::XMM8);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound4)
+        .addReg(XMMRound3)
+        .addReg(X86::XMM9);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound5)
+        .addReg(XMMRound4)
+        .addReg(X86::XMM10);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound6)
+        .addReg(XMMRound5)
+        .addReg(X86::XMM11);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound7)
+        .addReg(XMMRound6)
+        .addReg(X86::XMM12);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound8)
+        .addReg(XMMRound7)
+        .addReg(X86::XMM13);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCrr), XMMRound9)
+        .addReg(XMMRound8)
+        .addReg(X86::XMM14);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AESENCLASTrr), XMMRound10)
+        .addReg(XMMRound9)
+        .addReg(X86::XMM15);
+
+    // Compute Hash Table Address
+    // MACSlotReg = addr ^ (addr >> 32);
+    unsigned AddrShiftReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned AddrXorReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    //BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), MACSlotReg)
+//	.addOperand(addr);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHR64ri), AddrShiftReg)
+	.addOperand(addr)
+	.addImm(0x20);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::XOR64rr), AddrXorReg)
+	.addReg(AddrShiftReg)
+	.addOperand(addr);
+    // MACSlotReg = MACSlotReg * (MACSlotReg + 3);
+    unsigned AddrPlusThreeReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned SlotHashReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::ADD64ri8), AddrPlusThreeReg)
+	.addReg(AddrXorReg)
+	.addImm(3);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), X86::RAX)
+	.addReg(AddrPlusThreeReg);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MUL64r))
+	.addReg(AddrXorReg);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64rr), SlotHashReg)
+	.addReg(X86::RAX);
+    /*unsigned ZeroReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned CRCReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64ri), ZeroReg)
+	.addImm(0);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::CRC32r64r64), CRCReg)
+        .addReg(ZeroReg)
+        .addOperand(addr);*/
+    // Mask bits and compute slot
+    unsigned SlotMaskedReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned SlotReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned BaseReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned BaseTmpReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    unsigned MACAddrReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::AND64ri32), SlotMaskedReg)
+        .addReg(SlotHashReg)
+        .addImm(0x0FFFFFFF);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHL64ri), SlotReg)
+	.addReg(SlotMaskedReg)
+	.addImm(5);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOV64ri32), BaseTmpReg)
+        .addImm(0x60);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::SHL64ri), BaseReg)
+        .addReg(BaseTmpReg)
+        .addImm(0x20);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::OR64rr), MACAddrReg)
+        .addReg(SlotReg)
+        .addReg(BaseReg);
+
+    // Compare and Return
+    unsigned XMMCompare = MRI.createVirtualRegister(XMMClass);
+    addRegOffset(BuildMI(*MBB, MBBI, DL, TII->get(X86::PCMPEQQrm), XMMCompare)
+            .addReg(XMMRound10), MACAddrReg, false, 0);
+    BuildMI(*MBB, MBBI, DL, TII->get(X86::MOVSDto64rr))
+	.addOperand(retval)
+	.addReg(XMMCompare);
+
+    MI->eraseFromParent();
+
+    return MBB;
+}
+
+MachineBasicBlock *
+X86TargetLowering::HOOKReturnHack(MachineInstr *MI, MachineBasicBlock *MBB) const {
+    MachineFunction *MF = MBB->getParent();
+    X86MachineFunctionInfo *FI = MF->getInfo<X86MachineFunctionInfo>();
+    if (FI->getMACIndex() < 0) {
+        int MACIndex = MF->getFrameInfo()->CreateStackObject(16, 16, false);
+        FI->setMACIndex(MACIndex);
+    }
+
+    return MBB;
+}
+
+MachineBasicBlock *
+X86TargetLowering::HOOKCallHack(MachineInstr *MI, MachineBasicBlock *MBB) const {
+    MachineFunction *MF = MBB->getParent();
+    X86MachineFunctionInfo *FI = MF->getInfo<X86MachineFunctionInfo>();
+
+    // Enable stack protection
+    FI->setHasCall();
+
+    return MBB;
+}
+
+// END AESSECURE
+
 MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
                                                MachineBasicBlock *BB) const {
   switch (MI->getOpcode()) {
   default: llvm_unreachable("Unexpected instr type to insert");
+// BEGIN AESSECURE
+  case X86::MACPTR:
+    return EmitLoweredMACPtr(MI, BB);
+  case X86::CHECKPTR:
+    return EmitLoweredCheckPtr(MI, BB);
+  case X86::RET:
+  case X86::RETW:
+  case X86::RETI:
+  case X86::RETIW:
+  case X86::LRETL:
+  case X86::LRETW:
+  case X86::LRETQ:
+  case X86::LRETI:
+  case X86::LRETIW:
+    return HOOKReturnHack(MI, BB);
+  case X86::CALLpcrel32:
+  case X86::CALL32r:
+  case X86::CALL32m:
+  case X86::FARCALL16i:
+  case X86::FARCALL32i:
+  case X86::FARCALL16m:
+  case X86::FARCALL32m:
+  case X86::CALL64pcrel32:
+  case X86::CALL64r:
+  case X86::CALL64m:
+  case X86::FARCALL64:
+    return HOOKCallHack(MI, BB);
+// END AESSECURE
   case X86::TAILJMPd64:
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:

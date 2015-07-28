@@ -512,6 +512,19 @@ def int_convertuu  : Intrinsic<[llvm_anyint_ty],
                                [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
 
 //===----------------------------------------------------------------------===//
+// Pointer Protection intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_macptr : GCCBuiltin<"__builtin_ccfi_macptr">,
+                 Intrinsic<[llvm_v2i64_ty],
+                           [llvm_i64_ty, llvm_i64_ty],
+                           []>;
+def int_checkptr : GCCBuiltin<"__builtin_ccfi_checkptr">,
+                   Intrinsic<[llvm_i64_ty],
+                             [llvm_i64_ty, llvm_i64_ty],
+                             []>;
+
+//===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//
 

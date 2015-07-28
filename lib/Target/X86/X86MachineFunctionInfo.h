@@ -41,6 +41,10 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// ReturnAddrIndex - FrameIndex for return slot.
   int ReturnAddrIndex;
 
+  /// CCFI: ReturnAddr & FramePointer MAC
+  int MACIndex;
+  int HasCall;
+
   /// TailCallReturnAddrDelta - The number of bytes by which return address
   /// stack slot is moved as the result of tail call optimization.
   int TailCallReturnAddrDelta;
@@ -74,6 +78,8 @@ public:
                              CalleeSavedFrameSize(0),
                              BytesToPopOnReturn(0),
                              ReturnAddrIndex(0),
+                             MACIndex(-1),
+			     HasCall(0),
                              TailCallReturnAddrDelta(0),
                              SRetReturnReg(0),
                              GlobalBaseReg(0),
@@ -89,6 +95,8 @@ public:
       CalleeSavedFrameSize(0),
       BytesToPopOnReturn(0),
       ReturnAddrIndex(0),
+      MACIndex(-1),
+      HasCall(0),
       TailCallReturnAddrDelta(0),
       SRetReturnReg(0),
       GlobalBaseReg(0),
@@ -110,6 +118,12 @@ public:
 
   int getRAIndex() const { return ReturnAddrIndex; }
   void setRAIndex(int Index) { ReturnAddrIndex = Index; }
+
+  int getMACIndex() const { return MACIndex; }
+  void setMACIndex(int Index) { MACIndex = Index; }
+
+  void setHasCall() { HasCall = 1; }
+  bool hasCall() { return HasCall == 1; }
 
   int getTCReturnAddrDelta() const { return TailCallReturnAddrDelta; }
   void setTCReturnAddrDelta(int delta) {TailCallReturnAddrDelta = delta;}

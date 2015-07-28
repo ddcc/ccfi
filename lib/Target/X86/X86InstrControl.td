@@ -19,7 +19,7 @@
 //
 // The X86retflag return instructions are variadic because we may add ST0 and
 // ST1 arguments when returning values on the x87 stack.
-let isTerminator = 1, isReturn = 1, isBarrier = 1,
+let isTerminator = 1, isReturn = 1, isBarrier = 1, usesCustomInserter = 1,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
   def RET    : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret",
@@ -157,7 +157,7 @@ def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst"
 //===----------------------------------------------------------------------===//
 //  Call Instructions...
 //
-let isCall = 1 in
+let isCall = 1, usesCustomInserter = 1 in
   // All calls clobber the non-callee saved registers. ESP is marked as
   // a use to prevent stack-pointer assignments that appear immediately
   // before calls from potentially appearing dead. Uses for argument
@@ -234,7 +234,8 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 // RSP is marked as a use to prevent stack-pointer assignments that appear
 // immediately before calls from potentially appearing dead. Uses for argument
 // registers are added manually.
-let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
+let isCall = 1, usesCustomInserter = 1,
+    Uses = [RSP], SchedRW = [WriteJump] in {
   // NOTE: this pattern doesn't match "X86call imm", because we do not know
   // that the offset between an arbitrary immediate and the call will fit in
   // the 32-bit pcrel field that we have.
@@ -288,3 +289,20 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TAILJMPm64 : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
                      "jmp{q}\t{*}$dst  # TAILCALL", [], IIC_JMP_MEM>;
 }
+
+// x86-64 va_start lowering magic.
+let usesCustomInserter = 1, Defs = [EFLAGS] in {
+  def MACPTR : I<0, Pseudo,
+                  (outs VR128:$dst),
+                  (ins GR64:$src1, GR64:$src2),
+                  "# MACPTR $src1, $src2, $dst",
+                  [(set VR128:$dst,
+                   (int_macptr GR64:$src1, GR64:$src2))]>;
+  def CHECKPTR : I<0, Pseudo,
+                  (outs GR64:$dst),
+                  (ins GR64:$src1, GR64:$src2),
+                  "# CHECKPTR $src1, $src2, $dst",
+                  [(set GR64:$dst,
+                   (int_checkptr GR64:$src1, GR64:$src2))]>;
+}
+

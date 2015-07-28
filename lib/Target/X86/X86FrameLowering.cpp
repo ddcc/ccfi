@@ -381,6 +381,24 @@ static bool usesTheStack(const MachineFunction &MF) {
   return false;
 }
 
+void MACHINETRACE(MachineFunction &MF) {
+    bool hasCall = false;
+    uint32_t count = 0;
+
+    for (MachineFunction::iterator MBBI = MF.begin(), MBBE = MF.end();
+         MBBI != MBBE; ++MBBI) {
+      for (MachineBasicBlock::iterator MI = MBBI->begin(), ME = MBBI->end();
+           MI != ME; ++MI) {
+        if (MI->isCall())
+	  hasCall = true;
+
+	count++;
+      }
+    }
+
+    printf("TRACE: %s %d %s\n", MF.getName().str().c_str(), count, hasCall ? "PROT" : "OPT");
+}
+
 /// emitPrologue - Push callee-saved registers onto the stack, which
 /// automatically adjust the stack pointer. Adjust the stack pointer to allocate
 /// space for local variables. Also emit labels used by the exception handler to
@@ -409,6 +427,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
   unsigned StackPtr = RegInfo->getStackRegister();
   unsigned BasePtr = RegInfo->getBaseRegister();
   DebugLoc DL;
+
+  MACHINETRACE(MF);
 
   // If we're forcing a stack realignment we can't rely on just the frame
   // info, we need to know the ABI stack alignment as well in case we
@@ -690,6 +710,58 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
       .setMIFlag(MachineInstr::FrameSetup);
   }
 
+  // CCFI BEGIN
+
+  if (X86FI->getRAIndex() == 0) {
+      int ReturnAddrIndex = MFI->CreateFixedObject(SlotSize, -SlotSize, false);
+      X86FI->setRAIndex(ReturnAddrIndex);
+  }
+
+  if ((X86FI->getMACIndex()) >= 0 && X86FI->hasCall()) {
+    // Reserve stack object for MAC
+    addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), X86::R11),
+                X86FI->getRAIndex());
+    BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
+        .addReg(X86::R11);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
+	.addReg(X86::XMM4)
+	.addReg(X86::XMM5);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM6);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM7);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM8);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM9);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM10);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM11);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM12);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM13);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM14);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM15);
+    addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOVAPSmr)),
+                        X86FI->getMACIndex())
+        .addReg(X86::XMM4);
+  }
+  // CCFI
+
   if (( (!HasFP && NumBytes) || PushedRegs) && needsFrameMoves) {
     // Mark end of stack pointer adjustment.
     MCSymbol *Label = MMI.getContext().CreateTempSymbol();
@@ -791,6 +863,58 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     --MBBI;
   }
   MachineBasicBlock::iterator FirstCSPop = MBBI;
+
+  // CCFI BEGIN
+  if ((RetOpcode == X86::RET || RetOpcode == X86::RETI) && (X86FI->getMACIndex() >= 0) && X86FI->hasCall()) {
+    MachineBasicBlock::iterator SPMBBI = FirstCSPop;
+    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64rm), X86::R11),
+                X86FI->getRAIndex());
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
+        .addReg(X86::R11);
+    BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
+	.addReg(X86::XMM4)
+	.addReg(X86::XMM5);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM6);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM7);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM8);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM9);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM10);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM11);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM12);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM13);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM14);
+    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
+        .addReg(X86::XMM4)
+        .addReg(X86::XMM15);
+
+    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PCMPEQQrm), X86::XMM4)
+        .addReg(X86::XMM4), X86FI->getMACIndex());
+    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PANDrm), X86::XMM4)
+        .addReg(X86::XMM4), X86FI->getRAIndex(), -8);
+    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOVAPSmr)),
+        X86FI->getRAIndex(), -8).addReg(X86::XMM4);
+  }
+  // CCFI END
+
+
 
   DL = MBBI->getDebugLoc();
 
@@ -908,7 +1032,11 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
   int Offset = MFI->getObjectOffset(FI) - getOffsetOfLocalArea();
   uint64_t StackSize = MFI->getStackSize();
 
+  //printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
+
   if (RegInfo->hasBasePointer(MF)) {
+    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
+    printf("CCFI FrameLowering *A*\n");
     assert (hasFP(MF) && "VLAs and dynamic stack realign, but no FP?!");
     if (FI < 0) {
       // Skip the saved EBP.
@@ -918,6 +1046,8 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
       return Offset + StackSize;
     }
   } else if (RegInfo->needsStackRealignment(MF)) {
+    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
+    printf("CCFI FrameLowering *B*\n");
     if (FI < 0) {
       // Skip the saved EBP.
       return Offset + RegInfo->getSlotSize();
@@ -927,11 +1057,18 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
     }
     // FIXME: Support tail calls
   } else {
+    //  printf("C\n");
     if (!hasFP(MF))
       return Offset + StackSize;
 
     // Skip the saved EBP.
     Offset += RegInfo->getSlotSize();
+
+    // BEGIN AESSECURE
+    //if (FI < 0) // Adjust framepointer relative addresses to skip 128-bit + 
+    //padding
+    // Offset += 4*RegInfo->getSlotSize();
+    // END AESSECURE
 
     // Skip the RETADDR move area
     const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
@@ -1383,7 +1520,7 @@ void X86FrameLowering::adjustForHiPEPrologue(MachineFunction &MF) const {
         if (!MI->isCall())
           continue;
 
-        // Get callee operand.
+	// Get callee operand.
         const MachineOperand &MO = MI->getOperand(0);
 
         // Only take account of global function calls (no closures etc.).

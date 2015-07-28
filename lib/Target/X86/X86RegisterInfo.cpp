@@ -389,6 +389,12 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
         Reserved.set(*AI);
     }
   }
+  if (Is64Bit) {
+    for (unsigned n = 5; n != 16; n++) {
+      for (MCRegAliasIterator AI(X86::XMM0 + n, this, true); AI.isValid(); ++AI)
+        Reserved.set(*AI);
+    }
+  }
 
   return Reserved;
 }

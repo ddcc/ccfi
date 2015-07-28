@@ -239,7 +239,7 @@ def CC_X86_64_C : CallingConv<[
   // The first 8 FP/Vector arguments are passed in XMM registers.
   CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
             CCIfSubtarget<"hasSSE1()",
-            CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
+	    CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>>,
 
   // The first 8 256-bit vector arguments are passed in YMM registers, unless
   // this is a vararg function.
@@ -249,7 +249,7 @@ def CC_X86_64_C : CallingConv<[
   CCIfNotVarArg<CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
                           CCIfSubtarget<"hasFp256()",
                           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3,
-                                         YMM4, YMM5, YMM6, YMM7]>>>>,
+                                         YMM4]>>>>,
 
   // The first 8 512-bit vector arguments are passed in ZMM registers.
   CCIfNotVarArg<CCIfType<[v16i32, v8i64, v16f32, v8f64],
@@ -594,12 +594,11 @@ def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
 def CSR_32EHRet : CalleeSavedRegs<(add EAX, EDX, CSR_32)>;
 def CSR_64EHRet : CalleeSavedRegs<(add RAX, RDX, CSR_64)>;
 
-def CSR_Win64 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15,
-                                     (sequence "XMM%u", 6, 15))>;
+def CSR_Win64 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15)>;
 
 def CSR_MostRegs_64 : CalleeSavedRegs<(add RBX, RCX, RDX, RSI, RDI, R8, R9, R10,
                                            R11, R12, R13, R14, R15, RBP,
-                                           (sequence "XMM%u", 0, 15))>;
+                                           (sequence "XMM%u", 0, 3))>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,

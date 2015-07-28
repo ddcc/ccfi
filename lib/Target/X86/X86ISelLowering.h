@@ -603,6 +603,17 @@ namespace llvm {
     /// and some i16 instructions are slow.
     virtual bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const;
 
+    // CCFI BEGIN
+    virtual MachineBasicBlock *
+      EmitLoweredMACPtr(MachineInstr *MI, MachineBasicBlock *MBB) const;
+    virtual MachineBasicBlock *
+      EmitLoweredCheckPtr(MachineInstr *MI, MachineBasicBlock *MBB) const;
+    virtual MachineBasicBlock *
+      HOOKReturnHack(MachineInstr *MI, MachineBasicBlock *MBB) const;
+    virtual MachineBasicBlock *
+      HOOKCallHack(MachineInstr *MI, MachineBasicBlock *MBB) const;
+    // CCFI END
+
     virtual MachineBasicBlock *
       EmitInstrWithCustomInserter(MachineInstr *MI,
                                   MachineBasicBlock *MBB) const;

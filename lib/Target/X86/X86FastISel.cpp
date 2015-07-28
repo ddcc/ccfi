@@ -2149,10 +2149,9 @@ bool X86FastISel::DoSelectCall(const Instruction *I, const char *MemIntName) {
   if (Subtarget->is64Bit() && isVarArg && !isWin64) {
     // Count the number of XMM registers allocated.
     static const uint16_t XMMArgRegs[] = {
-      X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
-      X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
+      X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3
     };
-    unsigned NumXMMRegs = CCInfo.getFirstUnallocated(XMMArgRegs, 8);
+    unsigned NumXMMRegs = CCInfo.getFirstUnallocated(XMMArgRegs, 4);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, TII.get(X86::MOV8ri),
             X86::AL).addImm(NumXMMRegs);
   }

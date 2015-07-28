@@ -1,0 +1,8 @@
+
+./configure
+gmake
+cd runtime/libccfi
+gmake CC=<PATH TO NEW COMPILER>
+
+# Link programs against the dynamic runtime library seclang_rt.so
+

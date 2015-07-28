@@ -2364,7 +2364,7 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
   // Keep track of the number of assigned registers.
-  unsigned freeIntRegs = 6, freeSSERegs = 8;
+  unsigned freeIntRegs = 6, freeSSERegs = 4;
 
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -2496,7 +2496,7 @@ llvm::Value *X86_64ABIInfo::EmitVAArg(llvm::Value *VAListAddr, QualType Ty,
     fp_offset_p = CGF.Builder.CreateStructGEP(VAListAddr, 1, "fp_offset_p");
     fp_offset = CGF.Builder.CreateLoad(fp_offset_p, "fp_offset");
     llvm::Value *FitsInFP =
-      llvm::ConstantInt::get(CGF.Int32Ty, 176 - neededSSE * 16);
+      llvm::ConstantInt::get(CGF.Int32Ty, 112 - neededSSE * 16);
     FitsInFP = CGF.Builder.CreateICmpULE(fp_offset, FitsInFP, "fits_in_fp");
     InRegs = InRegs ? CGF.Builder.CreateAnd(InRegs, FitsInFP) : FitsInFP;
   }
