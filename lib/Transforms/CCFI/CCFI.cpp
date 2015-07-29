@@ -41,7 +41,41 @@ bool isFuncPtr(Type *ty)
     return ty->isPointerTy() && ty->getPointerElementType()->isFunctionTy();
 }
 
+uint32_t hashFuncType(Type *ty)
+{
+    uint32_t hash = 0;
+    FunctionType *ft = dyn_cast<FunctionType>(ty->getPointerElementType());
+
+    //errs() << ty->isPointerTy() << "\n";
+    //errs() << ty->getPointerElementType()->isFunctionTy() << "\n";
+
+    if (!ft)
+	return 0;
+
+    for (Type::subtype_iterator SI = ft->param_begin(), SE = ft->param_end();
+	    SI != SE; ++SI) {
+	hash += (uint32_t)(*SI)->getTypeID();
+	hash += hash << 10;
+	hash += hash >> 6;
+    }
+    hash += hash << 3;
+    hash ^= hash >> 11;
+    hash += hash << 15;
+
+    //errs() << "FUNC HASH " << hash << "\n";
+
+    return hash;
+}
+
 // Module
+
+CCFI::CCFI() : ModulePass(ID), gcb(NULL), enableTypedPtr(false)
+{
+    if (getenv("CCFI_ENABLE_TYPEDPTR") != NULL) {
+	enableTypedPtr = true;
+	errs() << "CCFI TYPEDPTR\n";
+    }
+}
 
 bool CCFI::runOnModule(Module &M)
 {
@@ -286,6 +320,12 @@ bool CCFI::doBasicBlock(Module &M, BasicBlock &BB)
 						      NULL);
 #endif
 
+	Value *tmpFuncType = cp.func;
+	if (enableTypedPtr) {
+	    Value *funcHash = B.getInt64(cp.hash);
+	    tmpFuncType = B.CreateXor(cp.func, funcHash);
+	}
+
 	if (cp.isMethodPtr) {
 	    Value *oneValue = B.getInt64(1);
 	    Value *maskVPtr = B.CreateAnd(cp.func, oneValue);
@@ -295,10 +335,10 @@ bool CCFI::doBasicBlock(Module &M, BasicBlock &BB)
 	    TerminatorInst *isMethod = SplitBlockAndInsertIfThen(inst, false);
 	    IRBuilder<> MB(isMethod);
 
-	    Value *checkptr_isValid = MB.CreateCall2(checkptr, cp.func, cp.addr);
+	    Value *checkptr_isValid = MB.CreateCall2(checkptr, tmpFuncType, cp.addr);
 	    isNotValid = MB.CreateICmpEQ(checkptr_isValid, zeroValue);
 	} else {
-	    Value *checkptr_isValid = B.CreateCall2(checkptr, cp.func, cp.addr);
+	    Value *checkptr_isValid = B.CreateCall2(checkptr, tmpFuncType, cp.addr);
 	    isNotValid = B.CreateICmpEQ(checkptr_isValid, zeroValue);
 	}
 
@@ -398,6 +438,7 @@ CCFI::CheckPoint CCFI::doExtractValue(Module &M, ExtractValueInst *EV)
 
     cp.inst = EV;
     cp.insertionPt = ni;
+    cp.hash = hashFuncType(func->getType()); 
     cp.func = tmpFunc;
     cp.addr = tmpAddr;
     cp.isMethodPtr = true;
@@ -565,6 +606,11 @@ void CCFI::doMacPtr(Module &M, IRBuilder<> &B, Value *addr, Value *func)
         tmpFunc = func;
     else
         tmpFunc = B.CreatePtrToInt(func, Type::getInt64Ty(ctx));
+    Value *tmpFuncType = tmpFunc;
+    if (enableTypedPtr) {
+	Value *funcHash = B.getInt64(hashFuncType(func->getType()));
+	tmpFuncType = B.CreateXor(tmpFunc, funcHash);
+    }
 
     Value *macptr = Intrinsic::getDeclaration(&M, Intrinsic::macptr);
 
@@ -576,7 +622,7 @@ void CCFI::doMacPtr(Module &M, IRBuilder<> &B, Value *addr, Value *func)
 						      NULL);
 #endif
 
-    B.CreateCall2(macptr, tmpFunc, tmpAddr);
+    B.CreateCall2(macptr, tmpFuncType, tmpAddr);
 }
 
 // Handle Loads
@@ -597,6 +643,7 @@ CCFI::CheckPoint CCFI::doLoad(Module &M, LoadInst *LI)
 
     cp.inst = LI;
     cp.insertionPt = ni;
+    cp.hash = hashFuncType(func->getType()); 
     cp.func = tmpFunc;
     cp.addr = tmpAddr;
     cp.isMethodPtr = false;

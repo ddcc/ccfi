@@ -10,17 +10,19 @@ namespace llvm {
 class CCFI : public ModulePass {
 public:
     static char ID;
-    CCFI() : ModulePass(ID), gcb(NULL) { }
+    CCFI();
     bool runOnModule(Module &M);
 private:
     struct CheckPoint {
 	Instruction *inst;
 	Instruction *insertionPt;
+	uint32_t hash;
 	Value *func;
 	Value *addr;
 	bool isMethodPtr;
     };
     typedef SmallVector<int, 10> depth_t;
+    bool enableTypedPtr;
     // Globals
     bool doGlobal(Module &M, Value &v, IRBuilder<> *B = NULL);
     bool doGlobal(Module &M, Value &v, Type *t, depth_t &depth, IRBuilder<> *B);
