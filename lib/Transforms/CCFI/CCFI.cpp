@@ -44,11 +44,14 @@ bool isFuncPtr(Type *ty)
 uint32_t hashFuncType(Type *ty)
 {
     uint32_t hash = 0;
-    FunctionType *ft = dyn_cast<FunctionType>(ty->getPointerElementType());
+    FunctionType *ft;
+
+    if (!ty)
+	return 0;
 
     //errs() << ty->isPointerTy() << "\n";
     //errs() << ty->getPointerElementType()->isFunctionTy() << "\n";
-
+    ft = dyn_cast<FunctionType>(ty->getPointerElementType());
     if (!ft)
 	return 0;
 
@@ -438,7 +441,11 @@ CCFI::CheckPoint CCFI::doExtractValue(Module &M, ExtractValueInst *EV)
 
     cp.inst = EV;
     cp.insertionPt = ni;
-    cp.hash = hashFuncType(func->getType()); 
+    if (enableTypedPtr) {
+	cp.hash = hashFuncType(func->getType());
+    } else {
+	cp.hash = 0;
+    }
     cp.func = tmpFunc;
     cp.addr = tmpAddr;
     cp.isMethodPtr = true;
@@ -643,7 +650,11 @@ CCFI::CheckPoint CCFI::doLoad(Module &M, LoadInst *LI)
 
     cp.inst = LI;
     cp.insertionPt = ni;
-    cp.hash = hashFuncType(func->getType()); 
+    if (enableTypedPtr) {
+	cp.hash = hashFuncType(func->getType());
+    } else {
+	cp.hash = 0;
+    }
     cp.func = tmpFunc;
     cp.addr = tmpAddr;
     cp.isMethodPtr = false;
