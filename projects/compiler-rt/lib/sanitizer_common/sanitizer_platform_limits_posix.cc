@@ -83,7 +83,6 @@
 #include <sys/statvfs.h>
 #include <sys/timex.h>
 #include <sys/user.h>
-#include <sys/ustat.h>
 #include <linux/cyclades.h>
 #include <linux/if_eql.h>
 #include <linux/if_plip.h>
@@ -165,7 +164,20 @@ namespace __sanitizer {
   unsigned struct_old_utsname_sz = sizeof(struct old_utsname);
   unsigned struct_oldold_utsname_sz = sizeof(struct oldold_utsname);
   unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
-  unsigned struct_ustat_sz = sizeof(struct ustat);
+
+  // Use pre-computed size of struct ustat to avoid <sys/ustat.h> which
+  // has been removed from glibc 2.28.
+#if defined(__aarch64__) || defined(__s390x__) || defined (__mips64) \
+  || defined(__powerpc64__) || defined(__arch64__) || defined(__sparcv9) \
+  || defined(__x86_64__)
+#define SIZEOF_STRUCT_USTAT 32
+#elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
+  || defined(__powerpc__) || defined(__s390__)
+#define SIZEOF_STRUCT_USTAT 20
+#else
+#error Unknown size of struct ustat
+#endif
+  unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
