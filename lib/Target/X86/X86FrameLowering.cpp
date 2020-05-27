@@ -428,7 +428,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
   unsigned BasePtr = RegInfo->getBaseRegister();
   DebugLoc DL;
 
-  MACHINETRACE(MF);
+//  MACHINETRACE(MF);
 
   // If we're forcing a stack realignment we can't rely on just the frame
   // info, we need to know the ABI stack alignment as well in case we
@@ -1035,8 +1035,8 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
   //printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
 
   if (RegInfo->hasBasePointer(MF)) {
-    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
-    printf("CCFI FrameLowering *A*\n");
+//    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
+//    printf("CCFI FrameLowering *A*\n");
     assert (hasFP(MF) && "VLAs and dynamic stack realign, but no FP?!");
     if (FI < 0) {
       // Skip the saved EBP.
@@ -1046,8 +1046,8 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
       return Offset + StackSize;
     }
   } else if (RegInfo->needsStackRealignment(MF)) {
-    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
-    printf("CCFI FrameLowering *B*\n");
+//    printf("getFrameIndexOffset(%p,%d)\n", (void*)&MF, FI);
+//    printf("CCFI FrameLowering *B*\n");
     if (FI < 0) {
       // Skip the saved EBP.
       return Offset + RegInfo->getSlotSize();

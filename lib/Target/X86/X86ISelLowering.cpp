@@ -15803,7 +15803,7 @@ X86TargetLowering::EmitLoweredMACPtr(MachineInstr *MI,
     MachineBasicBlock::iterator MBBI = MI;
     MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
 
-    printf("CCFI::EmitLoweredMACPtr!\n");
+//    printf("CCFI::EmitLoweredMACPtr!\n");
 
     assert(MI->getNumOperands() == 4 && "MACPTR should have 4 operands!");
 
@@ -15947,7 +15947,7 @@ X86TargetLowering::EmitLoweredCheckPtr(MachineInstr *MI,
     MachineBasicBlock::iterator MBBI = MI;
     MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
 
-    printf("CCFI::EmitLoweredCheckPtr!\n");
+//    printf("CCFI::EmitLoweredCheckPtr!\n");
 
     assert(MI->getNumOperands() == 4 && "CHECKPTR should have 4 operands!");
 

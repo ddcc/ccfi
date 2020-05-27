@@ -76,7 +76,7 @@ CCFI::CCFI() : ModulePass(ID), gcb(NULL), enableTypedPtr(false)
 {
     if (getenv("CCFI_ENABLE_TYPEDPTR") != NULL) {
 	enableTypedPtr = true;
-	errs() << "CCFI TYPEDPTR\n";
+//	errs() << "CCFI TYPEDPTR\n";
     }
 }
 
@@ -84,7 +84,7 @@ bool CCFI::runOnModule(Module &M)
 {
     bool mod = false;
 
-    errs() << "CCFI pointer protection enabled\n";
+//    errs() << "CCFI pointer protection enabled\n";
 
     gcb = NULL;
 
