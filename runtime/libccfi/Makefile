@@ -18,6 +18,7 @@ LINK_LIBS_IN_SHARED = 1
 SHARED_LIBRARY = 1
 
 CFLAGS = -msse4.2
+LDFLAGS = --target=x86_64-pc-linux-musl --sysroot=/opt/cross-none --gcc-toolchain=/opt/cross-none -Wl,-I,/lib/ld-musl-none-x86_64.so.1
 
 # Build and install this archive.                                                                                                                  
 #BUILD_ARCHIVE = 1

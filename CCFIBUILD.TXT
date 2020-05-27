@@ -2,7 +2,8 @@
 ./configure
 gmake
 cd runtime/libccfi
-gmake CC=<PATH TO NEW COMPILER>
+# comment out references to -lz and -ltinfo in Makefile.config
+gmake CC=<PATH TO NEW COMPILER> CXX=clang++-10
 
 # Link programs against the dynamic runtime library seclang_rt.so
 
