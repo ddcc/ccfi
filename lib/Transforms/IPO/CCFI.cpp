@@ -45,7 +45,7 @@ uint32_t hashFuncType(Type *ty)
     uint32_t hash = 0;
     FunctionType *ft;
 
-    if (!ty)
+    if (!ty || !ty->isPointerTy())
 	return 0;
 
     //errs() << ty->isPointerTy() << "\n";
