@@ -711,54 +711,55 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
   }
 
   // CCFI BEGIN
+  if (getenv("CCFI_ENABLE_STACK")) {
+    if (X86FI->getRAIndex() == 0) {
+        int ReturnAddrIndex = MFI->CreateFixedObject(SlotSize, -SlotSize, false);
+        X86FI->setRAIndex(ReturnAddrIndex);
+    }
 
-  if (X86FI->getRAIndex() == 0) {
-      int ReturnAddrIndex = MFI->CreateFixedObject(SlotSize, -SlotSize, false);
-      X86FI->setRAIndex(ReturnAddrIndex);
-  }
-
-  if ((X86FI->getMACIndex()) >= 0 && X86FI->hasCall()) {
-    // Reserve stack object for MAC
-    addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), X86::R11),
-                X86FI->getRAIndex());
-    BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
-        .addReg(X86::R11);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
-	.addReg(X86::XMM4)
-	.addReg(X86::XMM5);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM6);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM7);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM8);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM9);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM10);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM11);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM12);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM13);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM14);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM15);
-    addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOVAPSmr)),
-                        X86FI->getMACIndex())
-        .addReg(X86::XMM4);
+    if ((X86FI->getMACIndex()) >= 0 && X86FI->hasCall()) {
+      // Reserve stack object for MAC
+      addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), X86::R11),
+                  X86FI->getRAIndex());
+      BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
+          .addReg(X86::R11);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
+  	.addReg(X86::XMM4)
+  	.addReg(X86::XMM5);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM6);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM7);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM8);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM9);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM10);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM11);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM12);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM13);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM14);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM15);
+      addFrameReference(BuildMI(MBB, MBBI, DL, TII.get(X86::MOVAPSmr)),
+                          X86FI->getMACIndex())
+          .addReg(X86::XMM4);
+    }
   }
   // CCFI
 
@@ -865,56 +866,56 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator FirstCSPop = MBBI;
 
   // CCFI BEGIN
-  if ((RetOpcode == X86::RET || RetOpcode == X86::RETI) && (X86FI->getMACIndex() >= 0) && X86FI->hasCall()) {
-    MachineBasicBlock::iterator SPMBBI = FirstCSPop;
-    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64rm), X86::R11),
-                X86FI->getRAIndex());
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
-        .addReg(X86::R11);
-    BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
-	.addReg(X86::XMM4)
-	.addReg(X86::XMM5);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM6);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM7);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM8);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM9);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM10);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM11);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM12);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM13);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM14);
-    BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
-        .addReg(X86::XMM4)
-        .addReg(X86::XMM15);
+  if (getenv("CCFI_ENABLE_STACK")) {
+    if ((RetOpcode == X86::RET || RetOpcode == X86::RETI) && (X86FI->getMACIndex() >= 0) && X86FI->hasCall()) {
+      MachineBasicBlock::iterator SPMBBI = FirstCSPop;
+      addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64rm), X86::R11),
+                  X86FI->getRAIndex());
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64toSDrr), X86::XMM4)
+          .addReg(X86::R11);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::PXORrr), X86::XMM4)
+  	.addReg(X86::XMM4)
+  	.addReg(X86::XMM5);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM6);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM7);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM8);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM9);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM10);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM11);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM12);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM13);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM14);
+      BuildMI(MBB, SPMBBI, DL, TII.get(X86::AESENCLASTrr), X86::XMM4)
+          .addReg(X86::XMM4)
+          .addReg(X86::XMM15);
 
-    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PCMPEQQrm), X86::XMM4)
-        .addReg(X86::XMM4), X86FI->getMACIndex());
-    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PANDrm), X86::XMM4)
-        .addReg(X86::XMM4), X86FI->getRAIndex(), -8);
-    addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOVAPSmr)),
-        X86FI->getRAIndex(), -8).addReg(X86::XMM4);
+      addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PCMPEQQrm), X86::XMM4)
+          .addReg(X86::XMM4), X86FI->getMACIndex());
+      addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::PANDrm), X86::XMM4)
+          .addReg(X86::XMM4), X86FI->getRAIndex(), -8);
+      addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOVAPSmr)),
+          X86FI->getRAIndex(), -8).addReg(X86::XMM4);
+    }
   }
   // CCFI END
-
-
 
   DL = MBBI->getDebugLoc();
 
@@ -1065,7 +1066,7 @@ int X86FrameLowering::getFrameIndexOffset(const MachineFunction &MF, int FI) con
     Offset += RegInfo->getSlotSize();
 
     // BEGIN AESSECURE
-    //if (FI < 0) // Adjust framepointer relative addresses to skip 128-bit + 
+    //if (FI < 0) // Adjust framepointer relative addresses to skip 128-bit +
     //padding
     // Offset += 4*RegInfo->getSlotSize();
     // END AESSECURE
