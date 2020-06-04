@@ -21,12 +21,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassManager.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-
-#include "CCFI.h"
 
 // #define DEBUG_CHECKPTR 1
 
@@ -72,17 +71,74 @@ uint32_t hashFuncType(Type *ty)
 
 // Module
 
-CCFI::CCFI() : ModulePass(ID), gcb(NULL), enableTypedPtr(false)
+namespace {
+    class CCFI : public ModulePass {
+    public:
+        static char ID;
+        CCFI();
+        bool runOnModule(Module &M);
+    private:
+        struct CheckPoint {
+        Instruction *inst;
+        Instruction *insertionPt;
+        uint32_t hash;
+        Value *func;
+        Value *addr;
+        bool isMethodPtr;
+        };
+        typedef SmallVector<int, 10> depth_t;
+        bool enableTypedPtr;
+        // Globals
+        bool doGlobal(Module &M, Value &v, IRBuilder<> *B = NULL);
+        bool doGlobal(Module &M, Value &v, Type *t, depth_t &depth, IRBuilder<> *B);
+        void doGlobalCall(LoadInst *LI);
+        void addGlobalMAC(Module &M, Value &v, Type *t, depth_t &depth, IRBuilder<> *b);
+        // Global Constructor Block
+        IRBuilder<> *getGCB(Module &M);
+        void finishGCB();
+        IRBuilder<> *gcb;
+        // Basic Blocks
+        bool doBasicBlock(Module &M, BasicBlock &BB);
+        // Calls
+        bool doCall(Module &M, CallInst *CI);
+        // Extract Value
+        CheckPoint doExtractValue(Module &M, ExtractValueInst *EV);
+        // Stores
+        bool doStore(Module &M, StoreInst *SI);
+        bool checkMemberFPtrStore(Module &M, StoreInst *SI);
+        bool checkVTableStore(Module &M, StoreInst *SI);
+        bool checkVTTStore(Module &M, StoreInst *SI);
+        void doStoreCall(Module &M, StoreInst *SI);
+        // Loads
+        CheckPoint doLoad(Module &M, LoadInst *LI);
+        // Utils
+        bool isMemFptr(Type *t);
+        void doMacPtr(Module &M, IRBuilder<> &B, Value *addr, Value *func);
+    };
+}
+
+char CCFI::ID = 0;
+INITIALIZE_PASS(CCFI, "ccfifp", "CCFI pointer protection", false, false)
+
+ModulePass *llvm::createCCFIPass() {
+    return new CCFI();
+}
+
+CCFI::CCFI() : ModulePass(ID), gcb(NULL)
 {
-    if (getenv("CCFI_ENABLE_TYPEDPTR") != NULL) {
-	enableTypedPtr = true;
-//	errs() << "CCFI TYPEDPTR\n";
-    }
+    initializeCCFIPass(*PassRegistry::getPassRegistry());
+
+    enableTypedPtr = !getenv("CCFI_DISABLE_TYPEDPTR");
+//	if (enableTypedPtr)
+//        errs() << "CCFI TYPEDPTR\n";
 }
 
 bool CCFI::runOnModule(Module &M)
 {
     bool mod = false;
+
+    if (getenv("CCFI_DISABLE_FP") != NULL)
+        return mod;
 
 //    errs() << "CCFI pointer protection enabled\n";
 
@@ -669,23 +725,3 @@ CCFI::CheckPoint CCFI::doLoad(Module &M, LoadInst *LI)
 
     return cast<Instruction>(isNotValid);*/
 }
-
-char CCFI::ID = 0;
-static RegisterPass<CCFI> X("ccfifp", "CCFI pointer protection");
-
-static void registerMyPass(const PassManagerBuilder &B,
-                           PassManagerBase &PM) {
-    if (getenv("CCFI_DISABLE_FP") != NULL)
-        return;
-
-    PM.add(new CCFI());
-}
-
-// This should run at the end
-static RegisterStandardPasses
-    RegisterMyPass(PassManagerBuilder::EP_ModuleOptimizerEarly,
-                   registerMyPass);
-
-static RegisterStandardPasses
-    RegisterMyPass2(PassManagerBuilder::EP_EnabledOnOptLevel0,
-                   registerMyPass);

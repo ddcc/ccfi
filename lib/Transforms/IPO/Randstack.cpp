@@ -15,6 +15,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassManager.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -26,10 +27,15 @@ using namespace llvm;
 
 namespace {
   struct Randstack : public FunctionPass {
-    static char ID; 
-    Randstack() : FunctionPass(ID) {}
+    static char ID;
+    Randstack() : FunctionPass(ID) {
+      initializeRandstackPass(*PassRegistry::getPassRegistry());
+    }
 
     virtual bool runOnFunction(Function &F) {
+  if (getenv("CCFI_ENABLE_RANDSTACK") == NULL)
+      return false;
+
 	Module *M = F.getParent();
 	LLVMContext &ctx = M->getContext();
 
@@ -43,7 +49,7 @@ namespace {
 	r = B.CreateShl(r, B.getInt64(4));
 
 	Value *hack = B.CreateAlloca(Type::getInt8Ty(ctx), r);
-	
+
 	Function *prefetch = Intrinsic::getDeclaration(M,
 				Intrinsic::prefetch);
 
@@ -55,20 +61,8 @@ namespace {
 }
 
 char Randstack::ID = 0;
-static RegisterPass<Randstack> X("randstack", "randomize stack");
+INITIALIZE_PASS(Randstack, "randstack", "randomize stack", false, false)
 
-static void registerMyPass(const PassManagerBuilder &B,
-                           PassManagerBase &PM) {
-    if (getenv("CCFI_ENABLE_RANDSTACK") == NULL)
-        return;
-
-    PM.add(new Randstack());
+FunctionPass *llvm::createRandstackPass() {
+    return new Randstack();
 }
-
-static RegisterStandardPasses
-    RegisterMyPass(PassManagerBuilder::EP_ModuleOptimizerEarly,
-                   registerMyPass);
-
-static RegisterStandardPasses
-    RegisterMyPass2(PassManagerBuilder::EP_EnabledOnOptLevel0,
-                   registerMyPass);

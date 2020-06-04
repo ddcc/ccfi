@@ -144,6 +144,9 @@ void PassManagerBuilder::populateModulePassManager(PassManagerBase &MPM) {
     if (!GlobalExtensions->empty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
+    MPM.add(createCCFIPass());
+    MPM.add(createRandstackPass());
+
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
     return;
   }
@@ -155,6 +158,9 @@ void PassManagerBuilder::populateModulePassManager(PassManagerBase &MPM) {
 
   if (!DisableUnitAtATime) {
     addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
+
+    MPM.add(createCCFIPass());
+    MPM.add(createRandstackPass());
 
     MPM.add(createGlobalOptimizerPass());     // Optimize out global vars
 

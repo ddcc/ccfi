@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class FunctionPass;
 class ModulePass;
 class Pass;
 class Function;
@@ -197,6 +198,9 @@ ModulePass *createMetaRenamerPass();
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.
 ModulePass *createBarrierNoopPass();
+
+ModulePass *createCCFIPass();
+FunctionPass *createRandstackPass();
 
 } // End llvm namespace
 

@@ -1,6 +1,7 @@
 add_llvm_library(LLVMipo
   ArgumentPromotion.cpp
   BarrierNoopPass.cpp
+  CCFI.cpp
   ConstantMerge.cpp
   DeadArgumentElimination.cpp
   ExtractGV.cpp
@@ -18,6 +19,7 @@ add_llvm_library(LLVMipo
   PartialInlining.cpp
   PassManagerBuilder.cpp
   PruneEH.cpp
+  Randstack.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
   )

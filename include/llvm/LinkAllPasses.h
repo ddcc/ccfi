@@ -155,6 +155,9 @@ namespace {
       (void) llvm::createBBVectorizePass();
       (void) llvm::createPartiallyInlineLibCallsPass();
 
+      (void) llvm::createCCFIPass();
+      (void) llvm::createRandstackPass();
+
       (void)new llvm::IntervalPartition();
       (void)new llvm::FindUsedTypes();
       (void)new llvm::ScalarEvolution();
