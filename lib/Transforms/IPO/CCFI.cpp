@@ -402,7 +402,7 @@ bool CCFI::doBasicBlock(Module &M, BasicBlock &BB)
 	}
 
 	Instruction *validInst = cast<Instruction>(isNotValid);
-	TerminatorInst *failTerminator = SplitBlockAndInsertIfThen(validInst, true);
+	TerminatorInst *failTerminator = SplitBlockAndInsertIfThen(validInst, false);
 	IRBuilder<> FB(failTerminator);
 	Constant *CCFIFail = M.getOrInsertFunction("__ccfi_failure",
 						      Type::getVoidTy(ctx),

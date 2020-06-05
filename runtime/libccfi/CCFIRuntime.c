@@ -161,7 +161,7 @@ __ccfi_failure(uint64_t func, uint64_t addr)
 	printf("Possible hash collision!\n");
     }
 
-    abort();
+//    abort();
 }
 
 void
