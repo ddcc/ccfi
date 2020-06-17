@@ -33,8 +33,8 @@ namespace {
     }
 
     virtual bool runOnFunction(Function &F) {
-  if (getenv("CCFI_ENABLE_RANDSTACK") == NULL)
-      return false;
+	if (getenv("CCFI_DISABLE_RANDSTACK"))
+	  return false;
 
 	Module *M = F.getParent();
 	LLVMContext &ctx = M->getContext();
