@@ -140,8 +140,7 @@ namespace __sanitizer {
     u64 __unused1;
     u64 __unused2;
 #else
-    unsigned short mode;
-    unsigned short __pad1;
+    unsigned int mode;
     unsigned short __seq;
     unsigned short __pad2;
 #if defined(__x86_64__) && !defined(_LP64)

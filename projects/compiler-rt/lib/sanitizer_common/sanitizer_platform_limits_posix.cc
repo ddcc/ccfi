@@ -942,7 +942,9 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
+#if !SANITIZER_LINUX || __GLIBC_PREREQ (2, 31)
 CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
+#endif
 CHECK_SIZE_AND_OFFSET(ipc_perm, __seq);
 
 CHECK_TYPE_SIZE(shmid_ds);
