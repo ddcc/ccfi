@@ -17,6 +17,7 @@
 #define CCFI_HASHTBL_SIZE	(32ULL * 0x10000000ULL)
 
 static bool __ccfi_ready = false;
+static bool __ccfi_fail = false;
 
 struct hash_list {
 	uint64_t	 slot[4];
@@ -145,21 +146,22 @@ __ccfi_addmac_global(void *memaddr)
 void
 __ccfi_failure(uint64_t func, uint64_t addr)
 {
-    uint64_t *hash;
+//    uint64_t *hash;
+    if (!__ccfi_fail)
+        fprintf(stderr, "CCFI runtime pointer failure!\n");
+    __ccfi_fail = true;
+//    printf("Function %016lx stored at %016lx\n", func, addr);
 
-    printf("CCFI runtime pointer failure!\n");
-    printf("Function %016lx stored at %016lx\n", func, addr);
+//    hash = ccfi_hash(addr);
 
-    hash = ccfi_hash(addr);
+//    printf("Found:\n");
+//    printf("Hash Slot: %016lx\n", (uint64_t) hash);
+//    printf("Hash Found: %08lx%08lx\n", hash[0], hash[1]);
+//    printf("Function %016lx stored at %016lx\n", hash[2], hash[3]);
 
-    printf("Found:\n");
-    printf("Hash Slot: %016lx\n", (uint64_t) hash);
-    printf("Hash Found: %08lx%08lx\n", hash[0], hash[1]); 
-    printf("Function %016lx stored at %016lx\n", hash[2], hash[3]);
-
-    if (addr != hash[3]) {
-	printf("Possible hash collision!\n");
-    }
+//    if (addr != hash[3]) {
+//	printf("Possible hash collision!\n");
+//    }
 
 //    abort();
 }
