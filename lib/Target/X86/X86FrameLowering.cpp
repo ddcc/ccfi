@@ -711,7 +711,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF) const {
   }
 
   // CCFI BEGIN
-  if (getenv("CCFI_ENABLE_STACK")) {
+  if (!getenv("CCFI_DISABLE_STACK")) {
     if (X86FI->getRAIndex() == 0) {
         int ReturnAddrIndex = MFI->CreateFixedObject(SlotSize, -SlotSize, false);
         X86FI->setRAIndex(ReturnAddrIndex);
@@ -866,7 +866,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator FirstCSPop = MBBI;
 
   // CCFI BEGIN
-  if (getenv("CCFI_ENABLE_STACK")) {
+  if (!getenv("CCFI_DISABLE_STACK")) {
     if ((RetOpcode == X86::RET || RetOpcode == X86::RETI) && (X86FI->getMACIndex() >= 0) && X86FI->hasCall()) {
       MachineBasicBlock::iterator SPMBBI = FirstCSPop;
       addFrameReference(BuildMI(MBB, SPMBBI, DL, TII.get(X86::MOV64rm), X86::R11),
