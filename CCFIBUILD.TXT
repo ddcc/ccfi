@@ -1,5 +1,4 @@
-
-./configure
+./configure --enable-optimized
 gmake
 cd runtime/libccfi
 # comment out references to -lz and -ltinfo in Makefile.config
@@ -7,3 +6,14 @@ gmake CC=<PATH TO NEW COMPILER> CXX=clang++-10
 
 # Link programs against the dynamic runtime library seclang_rt.so
 
+To disable stack randomization:
+export CCFI_DISABLE_RANDSTACK=1
+
+To disable typed pointers:
+export CCFI_DISABLE_TYPEDPTR=1
+
+To disable stack protection:
+export CCFI_DISABLE_STACK=1
+
+To disable pointer instrumentation:
+export CCFI_DISABLE_FP=1
